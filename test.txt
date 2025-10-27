@@ -1,0 +1,10 @@
+curl -X PUT http://localhost:3000/200 --data-binary "@test200.txt"
+curl -X PUT http://localhost:3000/404 --data-binary "@test404.txt"
+
+curl -X GET http://localhost:3000/200 -v
+curl -X GET http://localhost:3000/999 -v
+
+curl -X DELETE http://localhost:3000/200 -v
+curl -X DELETE http://localhost:3000/999 -v
+
+curl -X POST http://localhost:3000/200 -v
