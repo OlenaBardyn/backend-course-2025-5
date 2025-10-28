@@ -66,6 +66,19 @@ const server = http.createServer(async function(req, res) {
     }
     break;
 
+    case 'PUT':
+    // Записати картинку в кеш
+        const putBody = [];
+        for await (const chunk of req) {
+            putBody.push(chunk);
+        }
+        const putImageData = Buffer.concat(putBody);
+        
+        await fs.writeFile(imagePath, putImageData);
+        res.writeHead(201, { 'Content-Type': 'text/plain' });
+        res.end('Created');
+        break;
+
         
       case 'DELETE':
         try {
