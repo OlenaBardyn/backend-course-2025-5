@@ -15,16 +15,10 @@ program.parse();
 const options = program.opts();
 
 // Створюємо директорію кешу, якщо її немає
-try {
-  if (!fsSync.existsSync(options.cache)) {
-    fsSync.mkdirSync(options.cache, { recursive: true });
-    console.log(`Cache directory created: ${options.cache}`);
-  }
-} catch (error) {
-  console.error(`Error creating cache directory: ${error.message}`);
-  process.exit(1);
+if (!fsSync.existsSync(options.cache)) {
+   fsSync.mkdirSync(options.cache, { recursive: true });
+   console.log(`Cache directory created: ${options.cache}`);
 }
-
 
 const server = http.createServer(async function(req, res) {
   // Отримуємо HTTP код з URL (/200 = "200")
@@ -36,7 +30,7 @@ const server = http.createServer(async function(req, res) {
     case 'GET':
     try {
         // Спробувати отримати з кешу
-        const image = await fs.readFile(imagePath);
+        const image = await fs.readFile(imagePath); //читає файл з диска
         res.writeHead(200, { 'Content-Type': 'image/jpeg' });
         res.end(image);
     } catch (error) {
@@ -44,17 +38,17 @@ const server = http.createServer(async function(req, res) {
         // якщо немає в кеші - запит до http.cat
         try {
             const response = await superagent
-            .get(`https://http.cat/${httpCode}.jpg`)
-            .responseType('arraybuffer');
-
-            const imageBuffer = Buffer.from(response.body);
+              .get(`https://http.cat/${httpCode}.jpg`)
+              .buffer(true);
+            const imageBuffer = response.body; 
 
             // Зберегти в кеш
-            await fs.writeFile(imagePath, imageBuffer);
+            await fs.writeFile(imagePath, imageBuffer); //imageBuffer - бінарні дані картинки
 
             // Відправити клієнту
             res.writeHead(200, { 'Content-Type': 'image/jpeg' });
             res.end(imageBuffer);
+            
         } catch (httpCatError) {
             console.error('http.cat error:', httpCatError.message);
             res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -67,17 +61,23 @@ const server = http.createServer(async function(req, res) {
     break;
 
     case 'PUT':
-    // Записати картинку в кеш
-        const putBody = [];
-        for await (const chunk of req) {
-            putBody.push(chunk);
+    let putBody = [];
+    req.on("data", function(chunk) {
+        putBody.push(chunk);
+    });
+    
+    req.on("end", async function() {
+        try {
+            const putImageData = Buffer.concat(putBody);
+            await fs.writeFile(imagePath, putImageData);
+            res.writeHead(201, { 'Content-Type': 'text/plain' });
+            res.end('Created');
+        } catch (error) {
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('Server Error');
         }
-        const putImageData = Buffer.concat(putBody);
-        
-        await fs.writeFile(imagePath, putImageData);
-        res.writeHead(201, { 'Content-Type': 'text/plain' });
-        res.end('Created');
-        break;
+    });
+    break;
 
         
       case 'DELETE':
